@@ -7,7 +7,6 @@
 # )
 #
 # my_cursor = my.cursor()
-#
 # my_cursor.execute("CREATE DATABASE our_users")
 #
 # my_cursor.execute('SHOW DATABASES')
