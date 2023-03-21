@@ -3,7 +3,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField, BooleanField, \
     ValidationError
 from wtforms.validators import DataRequired, Email, EqualTo, Length
-from datetime import datetime
+from wtforms.widgets import TextArea
+from datetime import datetime, date
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -23,7 +24,48 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
-# Create Database Model
+#Create Blog Post Model
+class Posts(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255))
+    content = db.Column(db.Text)
+    author = db.Column(db.String(255))
+    date_posted = db.Column(db.DateTime, default=datetime.utcnow)
+    slug = db.Column(db.String(255))
+
+
+#Create a Post Form
+class PostForm(FlaskForm):
+    title = StringField("Title", validators=[DataRequired()])
+    content = StringField("Content", validators=[DataRequired()], widget=TextArea())
+    author = StringField("Author", validators=[DataRequired()])
+    slug = StringField("Slug", validators=[DataRequired()])
+    submit = SubmitField("Submit")
+
+
+#Add Post Page
+@app.route('/add-post', methods=['GET', 'POST'])
+def add_post():
+    form = PostForm()
+    if form.validate_on_submit():
+        post = Posts(title=form.title.data, content=form.content.data, author=form.author.data, slug=form.slug.data)
+        #Clear The Form
+        form.title.data = ''
+        form.content.data = ''
+        form.author.data = ''
+        form.slug.data = ''
+        #Add Post To Database
+        with app.app_context():
+            db.session.add(post)
+            db.session.commit()
+
+        #Return a Massage
+        flash("Blog Post Submitted Successfully!")
+
+    #Redirect to Webpage
+    return render_template('add_post.html', form=form)
+
+# Create User Model
 class Users(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
@@ -48,7 +90,7 @@ class Users(db.Model):
         return '<Name %r>' % self.name
 
 
-# Create Form Class
+# Create User Form
 class UserForm(FlaskForm):
     name = StringField("Name", validators=[DataRequired()])
     email = StringField("Email", validators=[DataRequired()])
@@ -64,7 +106,7 @@ class NamerForm(FlaskForm):
     submit = SubmitField("Submit")
 
 
-# Create Form Class
+# Create Password Form
 class PasswordForm(FlaskForm):
     email = StringField("What`s Your Email", validators=[DataRequired()])
     password_hash = PasswordField("What`s Your Password", validators=[DataRequired()])
@@ -80,6 +122,7 @@ def add_user():
         if user is None:
             #Hash the password
             hashed_pw = generate_password_hash(form.password_hash.data)
+
             user = Users(name=form.name.data, email=form.email.data,
                          favorite_color=form.favorite_color.data, password_hash=hashed_pw)
             with app.app_context():
@@ -195,9 +238,13 @@ def test_pw():
         form.email.data = ''
         form.password_hash.data = ''
 
+        #Lookup user by email
         pw_to_check = Users.query.filter_by(email=email).first()
-        flash("Form Submitted Successfully")
-    return render_template('test_pw.html', email=email, password=password, form=form)
+
+        #Check hash password
+        passed = check_password_hash(pw_to_check.password_hash, password)
+
+    return render_template('test_pw.html', email=email, password=password, form=form, pw_to_check=pw_to_check, passed=passed)
 
 
 if __name__ == '__main__':
