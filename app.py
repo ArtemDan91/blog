@@ -47,6 +47,7 @@ class PostForm(FlaskForm):
 @app.route('/add-post', methods=['GET', 'POST'])
 def add_post():
     form = PostForm()
+    #Validate The Form
     if form.validate_on_submit():
         post = Posts(title=form.title.data, content=form.content.data, author=form.author.data, slug=form.slug.data)
         #Clear The Form
@@ -54,6 +55,7 @@ def add_post():
         form.content.data = ''
         form.author.data = ''
         form.slug.data = ''
+
         #Add Post To Database
         with app.app_context():
             db.session.add(post)
@@ -64,6 +66,15 @@ def add_post():
 
     #Redirect to Webpage
     return render_template('add_post.html', form=form)
+
+
+# Create Blog Page
+@app.route('/posts')
+def posts():
+    #Get all the posts from the database
+    posts = Posts.query.order_by(Posts.date_posted)
+    return render_template('posts.html', posts=posts)
+
 
 # Create User Model
 class Users(db.Model):
