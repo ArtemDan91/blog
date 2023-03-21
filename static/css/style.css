@@ -2,3 +2,12 @@ h1{
 	color: darkblue;
 	font-size: 50px;
 }
+
+.post_view{
+	text-decoration: none;
+	color:darkslategray;
+}
+
+.post_view:hover{
+	color:dimgray;
+}

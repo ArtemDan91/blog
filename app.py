@@ -1,4 +1,4 @@
-from flask import Flask, render_template, flash, request
+from flask import Flask, render_template, flash, request, redirect, url_for
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField, BooleanField, \
     ValidationError
@@ -24,7 +24,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
-#Create Blog Post Model
+# Create Blog Post Model
 class Posts(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255))
@@ -34,46 +34,126 @@ class Posts(db.Model):
     slug = db.Column(db.String(255))
 
 
-#Create a Post Form
+# Create a Post Form
 class PostForm(FlaskForm):
     title = StringField("Title", validators=[DataRequired()])
-    content = StringField("Content", validators=[DataRequired()], widget=TextArea())
+    content = StringField("Content", validators=[DataRequired()],
+                          widget=TextArea())
     author = StringField("Author", validators=[DataRequired()])
     slug = StringField("Slug", validators=[DataRequired()])
     submit = SubmitField("Submit")
 
 
-#Add Post Page
+# Add Post Page
 @app.route('/add-post', methods=['GET', 'POST'])
 def add_post():
     form = PostForm()
-    #Validate The Form
+    # Validate The Form
     if form.validate_on_submit():
-        post = Posts(title=form.title.data, content=form.content.data, author=form.author.data, slug=form.slug.data)
-        #Clear The Form
+        post = Posts(title=form.title.data, content=form.content.data,
+                     author=form.author.data, slug=form.slug.data)
+        # Clear The Form
         form.title.data = ''
         form.content.data = ''
         form.author.data = ''
         form.slug.data = ''
 
-        #Add Post To Database
+        # Add Post To Database
         with app.app_context():
             db.session.add(post)
             db.session.commit()
 
-        #Return a Massage
+        # Return a Massage
         flash("Blog Post Submitted Successfully!")
 
-    #Redirect to Webpage
+    # Redirect to Webpage
     return render_template('add_post.html', form=form)
 
 
 # Create Blog Page
 @app.route('/posts')
 def posts():
-    #Get all the posts from the database
-    posts = Posts.query.order_by(Posts.date_posted)
+    # Get all the posts from the database
+    posts = Posts.query.order_by(Posts.date_posted.desc())
+
+    # Redirect to Webpage
     return render_template('posts.html', posts=posts)
+
+
+# View Of The Post
+@app.route('/posts/<int:id>')
+def post(id):
+    # Get the post from the database
+    post = Posts.query.get_or_404(id)
+
+    # Redirect to Webpage
+    return render_template('post.html', post=post)
+
+
+# Edit Of The Post
+@app.route('/posts/edit/<int:id>', methods=['GET', 'POST'])
+def edit_post(id):
+    # Get the post from the database
+    post = Posts.query.get_or_404(id)
+    form = PostForm()
+
+    # Validate The Form
+    if form.validate_on_submit():
+
+        #Update Data
+        post.title = form.title.data
+        post.author = form.author.data
+        post.slug = form.slug.data
+        post.content = form.content.data
+
+        # Update Database
+        db.session.commit()
+
+        # Return a Massage
+        flash("Post Has Been Updated!")
+
+        # Redirect to Webpage
+        return redirect(url_for('post', id=post.id))
+
+    #Fill Out The Form Of Updating
+    form.title.data = post.title
+    form.author.data = post.author
+    form.slug.data = post.slug
+    form.content.data = post.content
+
+    # Redirect to Webpage
+    return render_template('edit_post.html', form=form)
+
+
+# Delete Of The Post
+@app.route('/posts/delete/<int:id>')
+def delete_post(id):
+    # Get the post from the database
+    post_to_delete = Posts.query.get_or_404(id)
+
+    try:
+        # Delete From Database
+        db.session.delete(post_to_delete)
+        db.session.commit()
+
+        # Return a Massage
+        flash('Blog Post Was Deleted!')
+
+        # Get all the posts from the database
+        posts = Posts.query.order_by(Posts.date_posted.desc())
+
+        # Redirect to Webpage
+        return render_template('posts.html', posts=posts)
+
+    except:
+        # Return an Error Massage
+        flash('Oops! There was a problem with deleting, try again...')
+
+        # Get all the posts from the database
+        posts = Posts.query.order_by(Posts.date_posted.desc())
+
+        # Redirect to Webpage
+        return render_template('posts.html', posts=posts)
 
 
 # Create User Model
@@ -106,8 +186,12 @@ class UserForm(FlaskForm):
     name = StringField("Name", validators=[DataRequired()])
     email = StringField("Email", validators=[DataRequired()])
     favorite_color = StringField("Favorite Color")
-    password_hash = PasswordField('Password', validators=[DataRequired(), EqualTo('password_hash2', message='Passwords Must Match!')])
-    password_hash2 = PasswordField('Confirm Password', validators=[DataRequired()])
+    password_hash = PasswordField('Password', validators=[DataRequired(),
+                                                          EqualTo(
+                                                              'password_hash2',
+                                                              message='Passwords Must Match!')])
+    password_hash2 = PasswordField('Confirm Password',
+                                   validators=[DataRequired()])
     submit = SubmitField("Submit")
 
 
@@ -120,8 +204,10 @@ class NamerForm(FlaskForm):
 # Create Password Form
 class PasswordForm(FlaskForm):
     email = StringField("What`s Your Email", validators=[DataRequired()])
-    password_hash = PasswordField("What`s Your Password", validators=[DataRequired()])
+    password_hash = PasswordField("What`s Your Password",
+                                  validators=[DataRequired()])
     submit = SubmitField("Submit")
+
 
 # Add NEW Database Record
 @app.route('/user/add', methods=['GET', 'POST'])
@@ -131,11 +217,12 @@ def add_user():
     if form.validate_on_submit():
         user = Users.query.filter_by(email=form.email.data).first()
         if user is None:
-            #Hash the password
+            # Hash the password
             hashed_pw = generate_password_hash(form.password_hash.data)
 
             user = Users(name=form.name.data, email=form.email.data,
-                         favorite_color=form.favorite_color.data, password_hash=hashed_pw)
+                         favorite_color=form.favorite_color.data,
+                         password_hash=hashed_pw)
             with app.app_context():
                 db.session.add(user)
                 db.session.commit()
@@ -188,6 +275,7 @@ def delete(id):
                                our_users=our_users)
     except:
         flash('Error with Deleting!!')
+        our_users = Users.query.order_by(Users.date_added)
         return render_template('add_user.html', form=form, name=name,
                                our_users=our_users)
 
@@ -249,13 +337,14 @@ def test_pw():
         form.email.data = ''
         form.password_hash.data = ''
 
-        #Lookup user by email
+        # Lookup user by email
         pw_to_check = Users.query.filter_by(email=email).first()
 
-        #Check hash password
+        # Check hash password
         passed = check_password_hash(pw_to_check.password_hash, password)
 
-    return render_template('test_pw.html', email=email, password=password, form=form, pw_to_check=pw_to_check, passed=passed)
+    return render_template('test_pw.html', email=email, password=password,
+                           form=form, pw_to_check=pw_to_check, passed=passed)
 
 
 if __name__ == '__main__':
