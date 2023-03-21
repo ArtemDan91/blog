@@ -1,5 +1,6 @@
 from flask import Flask, render_template, flash, request, redirect, url_for
 from flask_wtf import FlaskForm
+from sqlalchemy import event, text
 from wtforms import StringField, SubmitField, PasswordField, BooleanField, \
     ValidationError
 from wtforms.validators import DataRequired, Email, EqualTo, Length
@@ -25,6 +26,46 @@ app.config['SECRET_KEY'] = "my_super_secret_key"
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+#Flask_Login
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return Users.query.get(int(user_id))
+
+
+#Create Login Form
+class LoginForm(FlaskForm):
+    username = StringField("Username", validators=[DataRequired()])
+    password = PasswordField("Password", validators=[DataRequired()])
+    submit = SubmitField("Submit")
+
+
+# Create Login Page
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = Users.query.filter_by(username=form.username.data).first()
+        if user:
+            # Check the Hash:
+            if check_password_hash(user.password_hash, form.password.data):
+                login_user(user)
+                flash("Login Successful!")
+                return redirect(url_for('dashboard'))
+            else:
+                flash("Wrong Password - Try Again!")
+        else:
+            flash("That User Doesn`t Exist - Try Again!")
+    return render_template('login.html', form=form)
+
+
+# Create Dashboard Page
+@app.route('/dashboard', methods=['GET', 'POST'])
+@login_required
+def dashboard():
+    return render_template('dashboard.html')
 
 # Create Blog Post Model
 class Posts(db.Model):
@@ -224,17 +265,16 @@ def add_user():
             hashed_pw = generate_password_hash(form.password_hash.data)
 
             user = Users(username=form.username.data, name=form.name.data, email=form.email.data, favorite_color=form.favorite_color.data, password_hash=hashed_pw)
-            with app.app_context():
-                db.session.add(user)
-                db.session.commit()
-            name = form.name.data
-            form.name.data = ''
-            form.username.data = ''
-            form.email.data = ''
-            form.favorite_color.data = ''
-            form.password_hash.data = ''
+            db.session.add(user)
+            db.session.commit()
+        name = form.name.data
+        form.name.data = ''
+        form.username.data = ''
+        form.email.data = ''
+        form.favorite_color.data = ''
+        form.password_hash.data = ''
 
-            flash("User Added Successfully")
+        flash("User Added Successfully")
     our_users = Users.query.order_by(Users.date_added)
     return render_template('add_user.html', form=form, name=name,
                            our_users=our_users)
