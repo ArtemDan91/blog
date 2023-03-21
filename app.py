@@ -8,6 +8,8 @@ from datetime import datetime, date
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin, login_user, LoginManager, login_required, \
+    logout_user, current_user
 
 # Create a Flask instance
 app = Flask(__name__)
@@ -99,8 +101,7 @@ def edit_post(id):
 
     # Validate The Form
     if form.validate_on_submit():
-
-        #Update Data
+        # Update Data
         post.title = form.title.data
         post.author = form.author.data
         post.slug = form.slug.data
@@ -115,7 +116,7 @@ def edit_post(id):
         # Redirect to Webpage
         return redirect(url_for('post', id=post.id))
 
-    #Fill Out The Form Of Updating
+    # Fill Out The Form Of Updating
     form.title.data = post.title
     form.author.data = post.author
     form.slug.data = post.slug
@@ -157,8 +158,9 @@ def delete_post(id):
 
 
 # Create User Model
-class Users(db.Model):
+class Users(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(20), nullable=False, unique=True)
     name = db.Column(db.String(200), nullable=False)
     email = db.Column(db.String(120), nullable=False, unique=True)
     favorite_color = db.Column(db.String(120))
@@ -183,6 +185,7 @@ class Users(db.Model):
 
 # Create User Form
 class UserForm(FlaskForm):
+    username = StringField("Username", validators=[DataRequired()])
     name = StringField("Name", validators=[DataRequired()])
     email = StringField("Email", validators=[DataRequired()])
     favorite_color = StringField("Favorite Color")
@@ -220,14 +223,13 @@ def add_user():
             # Hash the password
             hashed_pw = generate_password_hash(form.password_hash.data)
 
-            user = Users(name=form.name.data, email=form.email.data,
-                         favorite_color=form.favorite_color.data,
-                         password_hash=hashed_pw)
+            user = Users(username=form.username.data, name=form.name.data, email=form.email.data, favorite_color=form.favorite_color.data, password_hash=hashed_pw)
             with app.app_context():
                 db.session.add(user)
                 db.session.commit()
             name = form.name.data
             form.name.data = ''
+            form.username.data = ''
             form.email.data = ''
             form.favorite_color.data = ''
             form.password_hash.data = ''
@@ -245,6 +247,7 @@ def update(id):
     name_to_update = Users.query.get_or_404(id)
     if request.method == 'POST':
         name_to_update.name = request.form['name']
+        name_to_update.username = request.form['username']
         name_to_update.email = request.form['email']
         name_to_update.favorite_color = request.form['favorite_color']
         try:
