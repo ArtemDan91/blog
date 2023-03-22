@@ -90,12 +90,12 @@ def add_post():
     form = PostForm()
     # Validate The Form
     if form.validate_on_submit():
+        poster = current_user.id
         post = Posts(title=form.title.data, content=form.content.data,
-                     author=form.author.data, slug=form.slug.data)
+                     poster_id=poster, slug=form.slug.data)
         # Clear The Form
         form.title.data = ''
         form.content.data = ''
-        form.author.data = ''
         form.slug.data = ''
 
         # Add Post To Database
@@ -142,7 +142,6 @@ def edit_post(id):
     if form.validate_on_submit():
         # Update Data
         post.title = form.title.data
-        post.author = form.author.data
         post.slug = form.slug.data
         post.content = form.content.data
 
@@ -157,7 +156,6 @@ def edit_post(id):
 
     # Fill Out The Form Of Updating
     form.title.data = post.title
-    form.author.data = post.author
     form.slug.data = post.slug
     form.content.data = post.content
 
@@ -336,9 +334,11 @@ class Posts(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255))
     content = db.Column(db.Text)
-    author = db.Column(db.String(255))
+    # author = db.Column(db.String(255))
     date_posted = db.Column(db.DateTime, default=datetime.utcnow)
     slug = db.Column(db.String(255))
+    # Foreign Key to Users
+    poster_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
 
 # Create User Model
@@ -351,6 +351,9 @@ class Users(db.Model, UserMixin):
     date_added = db.Column(db.DateTime, default=datetime.utcnow)
     # Make password
     password_hash = db.Column(db.String(128))
+    # User Can Have Many Posts(One-To-Many)
+    posts = db.relationship('Posts', backref='poster')
+
 
     @property
     def password(self):

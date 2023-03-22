@@ -6,11 +6,14 @@ h2{
 	color: darkblue;
 	font-size: 35px;
 }
+h3{
+	color: darkblue;
+}
 .post_view{
-	text-decoration: none;
-	color:darkslategray;
+
+	color:darkblue;
 }
 
 .post_view:hover{
-	color:dimgray;
+	color:mediumblue;
 }
