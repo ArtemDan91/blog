@@ -1,16 +1,11 @@
 from flask import Flask, render_template, flash, request, redirect, url_for
-from flask_wtf import FlaskForm
-from sqlalchemy import event, text
-from wtforms import StringField, SubmitField, PasswordField, BooleanField, \
-    ValidationError
-from wtforms.validators import DataRequired, Email, EqualTo, Length
-from wtforms.widgets import TextArea
 from datetime import datetime, date
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, login_user, LoginManager, login_required, \
     logout_user, current_user
+from webforms import LoginForm, PostForm, UserForm, NamerForm, PasswordForm
 
 # Create a Flask instance
 app = Flask(__name__)
@@ -35,13 +30,6 @@ def load_user(user_id):
     return Users.query.get(int(user_id))
 
 
-#Create Login Form
-class LoginForm(FlaskForm):
-    username = StringField("Username", validators=[DataRequired()])
-    password = PasswordField("Password", validators=[DataRequired()])
-    submit = SubmitField("Submit")
-
-
 # Create Login Page
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -61,11 +49,39 @@ def login():
     return render_template('login.html', form=form)
 
 
+# Create Logout Page
+@app.route('/logout', methods=['GET', 'POST'])
+@login_required
+def logout():
+    logout_user()
+    flash("You Have Been Logged Out!")
+    return redirect(url_for('login'))
+
+
 # Create Dashboard Page
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    form = UserForm()
+    id = current_user.id
+    name_to_update = Users.query.get_or_404(id)
+    if request.method == 'POST':
+        name_to_update.name = request.form['name']
+        name_to_update.username = request.form['username']
+        name_to_update.email = request.form['email']
+        name_to_update.favorite_color = request.form['favorite_color']
+        try:
+            db.session.commit()
+            flash('User Updated Successfully!')
+            return render_template('dashboard.html',
+                                   name_to_update=name_to_update, form=form)
+        except:
+            flash('Error with Updating!!')
+            return render_template('dashboard.html',
+                                   name_to_update=name_to_update, form=form)
+    return render_template('dashboard.html',
+                           name_to_update=name_to_update, form=form, id=id)
+
 
 # Create Blog Post Model
 class Posts(db.Model):
@@ -77,18 +93,9 @@ class Posts(db.Model):
     slug = db.Column(db.String(255))
 
 
-# Create a Post Form
-class PostForm(FlaskForm):
-    title = StringField("Title", validators=[DataRequired()])
-    content = StringField("Content", validators=[DataRequired()],
-                          widget=TextArea())
-    author = StringField("Author", validators=[DataRequired()])
-    slug = StringField("Slug", validators=[DataRequired()])
-    submit = SubmitField("Submit")
-
-
 # Add Post Page
 @app.route('/add-post', methods=['GET', 'POST'])
+# @login_required
 def add_post():
     form = PostForm()
     # Validate The Form
@@ -135,6 +142,7 @@ def post(id):
 
 # Edit Of The Post
 @app.route('/posts/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
 def edit_post(id):
     # Get the post from the database
     post = Posts.query.get_or_404(id)
@@ -169,6 +177,7 @@ def edit_post(id):
 
 # Delete Of The Post
 @app.route('/posts/delete/<int:id>')
+@login_required
 def delete_post(id):
     # Get the post from the database
     post_to_delete = Posts.query.get_or_404(id)
@@ -222,35 +231,6 @@ class Users(db.Model, UserMixin):
 
     def __repr__(self):
         return '<Name %r>' % self.name
-
-
-# Create User Form
-class UserForm(FlaskForm):
-    username = StringField("Username", validators=[DataRequired()])
-    name = StringField("Name", validators=[DataRequired()])
-    email = StringField("Email", validators=[DataRequired()])
-    favorite_color = StringField("Favorite Color")
-    password_hash = PasswordField('Password', validators=[DataRequired(),
-                                                          EqualTo(
-                                                              'password_hash2',
-                                                              message='Passwords Must Match!')])
-    password_hash2 = PasswordField('Confirm Password',
-                                   validators=[DataRequired()])
-    submit = SubmitField("Submit")
-
-
-# Create Form Class
-class NamerForm(FlaskForm):
-    name = StringField("What`s Your Name", validators=[DataRequired()])
-    submit = SubmitField("Submit")
-
-
-# Create Password Form
-class PasswordForm(FlaskForm):
-    email = StringField("What`s Your Email", validators=[DataRequired()])
-    password_hash = PasswordField("What`s Your Password",
-                                  validators=[DataRequired()])
-    submit = SubmitField("Submit")
 
 
 # Add NEW Database Record
@@ -326,11 +306,7 @@ def delete(id):
 # Create route decorator
 @app.route('/')
 def index():
-    first_name = 'John'
-    favorite_pizza = ['Pepperoni', 'Cheese', 'Mushrooms', 41]
-    return render_template('index.html',
-                           first_name=first_name,
-                           favorite_pizza=favorite_pizza)
+    return render_template('index.html')
 
 
 # http://127.0.0.1:5000/user/John

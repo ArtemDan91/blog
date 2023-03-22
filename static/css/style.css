@@ -1,8 +1,11 @@
 h1{
 	color: darkblue;
-	font-size: 50px;
+	font-size: 40px;
 }
-
+h2{
+	color: darkblue;
+	font-size: 35px;
+}
 .post_view{
 	text-decoration: none;
 	color:darkslategray;

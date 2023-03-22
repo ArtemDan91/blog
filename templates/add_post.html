@@ -10,6 +10,8 @@
 	
 {% endfor %}
 
+
+{% if current_user.is_authenticated %}
 <h1>Add Blog Post...</h1>
 	<br>
 <div class="shadow p-3 mb-5 bg-body rounded">
@@ -33,5 +35,11 @@
 	</form>
 </div>
 
+{% else %}
+<h2>You Must Be Logged In!</h2>
+<p>Sorry, you must be logged in to create a blog post!</p>
+<a href="{{ url_for('login') }}" class="btn btn-secondary btn-sm">Login</a>
+
+{% endif %}
 
 {% endblock %}
