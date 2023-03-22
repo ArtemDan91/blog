@@ -5,7 +5,7 @@ from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, login_user, LoginManager, login_required, \
     logout_user, current_user
-from webforms import LoginForm, PostForm, UserForm, NamerForm, PasswordForm
+from webforms import LoginForm, SearchForm, PostForm, UserForm, NamerForm, PasswordForm
 
 # Create a Flask instance
 app = Flask(__name__)
@@ -153,14 +153,18 @@ def edit_post(id):
 
         # Redirect to Webpage
         return redirect(url_for('post', id=post.id))
+    if current_user.id == post.poster_id:
+        # Fill Out The Form Of Updating
+        form.title.data = post.title
+        form.slug.data = post.slug
+        form.content.data = post.content
 
-    # Fill Out The Form Of Updating
-    form.title.data = post.title
-    form.slug.data = post.slug
-    form.content.data = post.content
-
-    # Redirect to Webpage
-    return render_template('edit_post.html', form=form)
+        # Redirect to Webpage
+        return render_template('edit_post.html', form=form)
+    else:
+        flash("You Aren`t Authorized To Edit This Post!")
+        posts = Posts.query.order_by(Posts.date_posted.desc())
+        return render_template('posts.html', posts=posts)
 
 
 # Delete Of The Post
@@ -169,30 +173,59 @@ def edit_post(id):
 def delete_post(id):
     # Get the post from the database
     post_to_delete = Posts.query.get_or_404(id)
+    id = current_user.id
+    if id == post_to_delete.poster.id:
+        try:
+            # Delete From Database
+            db.session.delete(post_to_delete)
+            db.session.commit()
 
-    try:
-        # Delete From Database
-        db.session.delete(post_to_delete)
-        db.session.commit()
+            # Return a Massage
+            flash('Blog Post Was Deleted!')
 
+            # Get all the posts from the database
+            posts = Posts.query.order_by(Posts.date_posted.desc())
+
+            # Redirect to Webpage
+            return render_template('posts.html', posts=posts)
+
+        except:
+            # Return an Error Massage
+            flash('Oops! There was a problem with deleting, try again...')
+
+            # Get all the posts from the database
+            posts = Posts.query.order_by(Posts.date_posted.desc())
+
+            # Redirect to Webpage
+            return render_template('posts.html', posts=posts)
+    else:
         # Return a Massage
-        flash('Blog Post Was Deleted!')
+        flash('You Aren`t Authorized To Delete This Post!')
 
         # Get all the posts from the database
         posts = Posts.query.order_by(Posts.date_posted.desc())
-
-        # Redirect to Webpage
         return render_template('posts.html', posts=posts)
 
-    except:
-        # Return an Error Massage
-        flash('Oops! There was a problem with deleting, try again...')
 
-        # Get all the posts from the database
-        posts = Posts.query.order_by(Posts.date_posted.desc())
+#Pass to Navbar
+@app.context_processor
+def base():
+    form = SearchForm()
+    return dict(form=form)
 
-        # Redirect to Webpage
-        return render_template('posts.html', posts=posts)
+#Create Search Function
+@app.route('/search', methods=['POST'])
+def search():
+    form = SearchForm()
+    posts = Posts.query
+    if form.validate_on_submit():
+        #Get Data From Submited Form
+        post.searched = form.searched.data
+        #Query The Database
+        posts = posts.filter(Posts.content.like('%' + post.searched + '%'))
+        posts = posts.order_by(Posts.title).all()
+
+        return render_template('search.html', form=form, searched=post.searched, posts=posts)
 
 
 # Add NEW Database Record
@@ -353,7 +386,6 @@ class Users(db.Model, UserMixin):
     password_hash = db.Column(db.String(128))
     # User Can Have Many Posts(One-To-Many)
     posts = db.relationship('Posts', backref='poster')
-
 
     @property
     def password(self):
