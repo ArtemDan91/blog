@@ -307,6 +307,17 @@ def index():
     return render_template('index.html')
 
 
+# Create Admin Page
+@app.route('/admin')
+@login_required
+def admin():
+    id = current_user.id
+    if id == 6:
+        return render_template('admin.html')
+    else:
+        flash("Sorry, you must be the Admin to access the Admin Page!")
+        return redirect(url_for('dashboard'))
+
 # http://127.0.0.1:5000/user/John
 @app.route('/user/<name>')
 def user(name):
