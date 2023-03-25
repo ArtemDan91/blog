@@ -77,25 +77,33 @@ def dashboard():
         name_to_update.email = request.form['email']
         name_to_update.favorite_color = request.form['favorite_color']
         name_to_update.about_author = request.form['about_author']
-        name_to_update.profile_pic = request.files['profile_pic']
-        #Create Uniqe Name for File
-        pic_filename = secure_filename(name_to_update.profile_pic.filename)
-        pic_name = str(uuid.uuid1()) + '_' + pic_filename
-        # Save Image
-        saver = request.files['profile_pic']
 
-        name_to_update.profile_pic = pic_name
-        try:
+        if request.files['profile_pic']:
+            name_to_update.profile_pic = request.files['profile_pic']
+            #Create Uniqe Name for File
+            pic_filename = secure_filename(name_to_update.profile_pic.filename)
+            pic_name = str(uuid.uuid1()) + '_' + pic_filename
+            # Save Image
+            saver = request.files['profile_pic']
+
+            name_to_update.profile_pic = pic_name
+            try:
+                db.session.commit()
+                saver.save(os.path.join(app.config['UPLOAD_FOLDER'], pic_name))
+                flash('User Updated Successfully!')
+                return render_template('dashboard.html',
+                                       name_to_update=name_to_update, form=form)
+            except:
+                flash('Error with Updating!!')
+                return render_template('dashboard.html',
+                                       name_to_update=name_to_update, form=form)
+        else:
             db.session.commit()
-            saver.save(os.path.join(app.config['UPLOAD_FOLDER'], pic_name))
             flash('User Updated Successfully!')
             return render_template('dashboard.html',
                                    name_to_update=name_to_update, form=form)
-        except:
-            flash('Error with Updating!!')
-            return render_template('dashboard.html',
-                                   name_to_update=name_to_update, form=form)
-    return render_template('dashboard.html',
+    else:
+        return render_template('dashboard.html',
                            name_to_update=name_to_update, form=form, id=id)
 
 
@@ -169,7 +177,7 @@ def edit_post(id):
 
         # Redirect to Webpage
         return redirect(url_for('post', id=post.id))
-    if current_user.id == post.poster_id:
+    if current_user.id == post.poster_id or current_user.id == 6:
         # Fill Out The Form Of Updating
         form.title.data = post.title
         form.slug.data = post.slug
@@ -190,7 +198,7 @@ def delete_post(id):
     # Get the post from the database
     post_to_delete = Posts.query.get_or_404(id)
     id = current_user.id
-    if id == post_to_delete.poster.id:
+    if id == post_to_delete.poster.id or id == 6:
         try:
             # Delete From Database
             db.session.delete(post_to_delete)
@@ -299,22 +307,27 @@ def update(id):
 
 # Delete Database Record
 @app.route('/delete/<int:id>')
+@login_required
 def delete(id):
-    user_to_delete = Users.query.get_or_404(id)
-    name = None
-    form = UserForm()
-    try:
-        db.session.delete(user_to_delete)
-        db.session.commit()
-        flash('User Deleted Successfully!')
-        our_users = Users.query.order_by(Users.date_added)
-        return render_template('add_user.html', form=form, name=name,
-                               our_users=our_users)
-    except:
-        flash('Error with Deleting!!')
-        our_users = Users.query.order_by(Users.date_added)
-        return render_template('add_user.html', form=form, name=name,
-                               our_users=our_users)
+    if id == current_user.id:
+        user_to_delete = Users.query.get_or_404(id)
+        name = None
+        form = UserForm()
+        try:
+            db.session.delete(user_to_delete)
+            db.session.commit()
+            flash('User Deleted Successfully!')
+            our_users = Users.query.order_by(Users.date_added)
+            return render_template('add_user.html', form=form, name=name,
+                                   our_users=our_users)
+        except:
+            flash('Error with Deleting!!')
+            our_users = Users.query.order_by(Users.date_added)
+            return render_template('add_user.html', form=form, name=name,
+                                   our_users=our_users)
+    else:
+        flash('Sorry, you can`t delete this user!')
+        return redirect(url_for('dashboard'))
 
 
 # Create route decorator

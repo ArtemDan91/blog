@@ -13,7 +13,13 @@
 
 
 {% if current_user.is_authenticated %}
-<h1>Add Blog Post...</h1>
+<header class="py-1 bg-light border-bottom mb-4">
+	<div class="container">
+		<div class="text-left my-3">
+			<h2 class="fw-bolder">Add Blog Post</h2>
+		</div>
+	</div>
+</header>
 	<br>
 <div class="shadow p-3 mb-5 bg-body rounded">
 
@@ -37,7 +43,13 @@
 </div>
 
 {% else %}
-<h2>You Must Be Logged In!</h2>
+<header class="py-1 bg-light border-bottom mb-4">
+	<div class="container">
+		<div class="text-left my-3">
+			<h2 class="fw-bolder">You Must Be Logged In!</h2>
+		</div>
+	</div>
+</header>
 <p>Sorry, you must be logged in to create a blog post!</p>
 <a href="{{ url_for('login') }}" class="btn btn-secondary btn-sm">Login</a>
 
