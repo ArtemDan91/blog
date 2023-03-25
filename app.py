@@ -7,6 +7,9 @@ from flask_login import UserMixin, login_user, LoginManager, login_required, \
     logout_user, current_user
 from webforms import LoginForm, SearchForm, PostForm, UserForm, NamerForm, PasswordForm
 from flask_ckeditor import CKEditor
+from werkzeug.utils import secure_filename
+import uuid
+import os
 
 # Create a Flask instance
 app = Flask(__name__)
@@ -19,6 +22,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = \
     'mysql+pymysql://root:password123@localhost/our_users'
 # Secret Key
 app.config['SECRET_KEY'] = "my_super_secret_key"
+app.config['UPLOAD_FOLDER'] = 'static/images/upload/'
 # Initialize Database
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -73,8 +77,17 @@ def dashboard():
         name_to_update.email = request.form['email']
         name_to_update.favorite_color = request.form['favorite_color']
         name_to_update.about_author = request.form['about_author']
+        name_to_update.profile_pic = request.files['profile_pic']
+        #Create Uniqe Name for File
+        pic_filename = secure_filename(name_to_update.profile_pic.filename)
+        pic_name = str(uuid.uuid1()) + '_' + pic_filename
+        # Save Image
+        saver = request.files['profile_pic']
+
+        name_to_update.profile_pic = pic_name
         try:
             db.session.commit()
+            saver.save(os.path.join(app.config['UPLOAD_FOLDER'], pic_name))
             flash('User Updated Successfully!')
             return render_template('dashboard.html',
                                    name_to_update=name_to_update, form=form)
@@ -399,6 +412,7 @@ class Users(db.Model, UserMixin):
     favorite_color = db.Column(db.String(120))
     about_author = db.Column(db.Text(500), nullable=True)
     date_added = db.Column(db.DateTime, default=datetime.utcnow)
+    profile_pic = db.Column(db.String(120), nullable=True)
     # Make password
     password_hash = db.Column(db.String(128))
     # User Can Have Many Posts(One-To-Many)
