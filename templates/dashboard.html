@@ -39,8 +39,12 @@
 
 				</div>
 				<div class="col-md-6">
-					<img src="{{ url_for('static', filename='images/profile.jpg') }}" width="200" align="right" class="profile">
+					{% if current_user.profile_pic %}
+						<img src="{{ url_for('static', filename='images/upload/' + current_user.profile_pic) }}" width="200" align="right" class="profile">
+					{% else %}
+						<img src="{{ url_for('static', filename='images/profile.jpg') }}" width="200" align="right" class="profile">
 
+					{% endif %}
 				</div>
 			</div>
 		</div>
@@ -53,7 +57,7 @@
 			Update profile
 		</div>
 		<div class="card-body">
-			<form action="/dashboard" method="POST" >
+			<form action="/dashboard" method="POST" enctype="multipart/form-data" >
 				{{ form.hidden_tag() }}
 		
 				{{ form.name.label(class="form-label") }}
@@ -68,7 +72,11 @@
 				{{ form.favorite_color.label(class="form-label") }}
 				{{ form.favorite_color(class="form-control", value=name_to_update.favorite_color) }}
 				<br>
+				{{ form.about_author.label(class="form-label") }}
 				<textarea name="about_author" class="form-control" rows="5">{{ name_to_update.about_author }}</textarea>
+				<br>
+				{{ form.profile_pic.label(class="form-label") }}
+				{{ form.profile_pic(class="form-control", value=name_to_update.profile_pic) }}
 				<br>
 				{{ form.submit(class="btn btn-secondary btn-sm") }}
 		

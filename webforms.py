@@ -1,4 +1,5 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField
 from wtforms import StringField, TextAreaField, SubmitField, PasswordField
 from wtforms.validators import DataRequired, EqualTo
 from wtforms.widgets import TextArea
@@ -36,6 +37,7 @@ class UserForm(FlaskForm):
                                                               message='Passwords Must Match!')])
     password_hash2 = PasswordField('Confirm Password',
                                    validators=[DataRequired()])
+    profile_pic = FileField("Profile Pic")
     submit = SubmitField("Submit")
 
 

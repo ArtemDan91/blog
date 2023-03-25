@@ -32,6 +32,7 @@
 		{{ form.favorite_color.label(class="form-label") }}
 		{{ form.favorite_color(class="form-control", value=name_to_update.favorite_color) }}
 		<br>
+		{{ form.about_author.label(class="form-label") }}
 		<textarea name="about_author" class="form-control" rows="5">{{ name_to_update.about_author }}</textarea><br>
 		{{ form.submit(class="btn btn-secondary") }}
 		<a href="{{ url_for('delete', id=name_to_update.id) }}" class="btn btn-danger">Delete</a>
